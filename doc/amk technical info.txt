@@ -1,0 +1,26 @@
+$0E8000: "@AMK" (default location)
+  - If not found, check address at $008076 (maybe they changed the address) -> look for "@AMK" there, if not found return "No AMK error"
+
+$0E8000+5: long pointer to sample groups
+  - Table of short pointers to sample groups (first is $0000, because it's indexed by song number and song $00 is invalid)
+  - Each sample group is a table (same bank as other table) starting with sample count (1 byte) followed by sample id (2 bytes each)
+
+$0E8000+8: long pointer to songs + samples + sample loops
+  - Table of long pointers of song data (3 bytes each)
+  - First pointer is always $000000 because it's indexed by song number and song 0 is invalid
+  - Pointers to global songs are all $000000
+  - Ends with $FFFFFF
+  
+  - After there's the sample pointers table (3 bytes each), with long pointers to sample data for each sample id
+  - If the pointer is $XX0000, it's invalid (empty sample)
+  - Ends with $FFFFFF
+  
+  - After there's the sample loop table (2 bytes each)
+  - Value is sample loop value for each sample id (remember to add the sample's position in ARAM to get correct loop pointer)
+
+$0F8000: SPC driver
+  - To find it:
+    - x = read2($008053)
+    - read2(x+3)+((read1(x+15))<<16)
+
+Music, samples and SPC engine have a 2 byte header with size -> actual data starts at [pointer]+2
