@@ -248,7 +248,7 @@ void amk_dump(const rom_t *rom,
                                                AMK_SPC_ENGINE_ADDR));
     // TODO restore
     for (i = 10; i < 11; i++)
-    //for (i = 0; i < music_num; i++)
+    //for (i = 1; i < music_num; i++)
     {
         char spc_file_path[500];
         //******************

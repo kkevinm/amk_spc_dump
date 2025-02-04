@@ -129,7 +129,6 @@ void spc_set_dump_date(spc_t *spc,
     {
         char dump_date_tmp[sizeof(spc->dump_date) + 1];
         //******************
-        printf("day %d, month %d, year %d", day, month, year);
         snprintf(dump_date_tmp,
                  sizeof(dump_date_tmp),
                  "%02d/%02d/%04d",
