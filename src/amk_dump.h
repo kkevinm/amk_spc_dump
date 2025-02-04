@@ -3,7 +3,8 @@
 
 #include "rom.h"
 
-void amk_dump(rom_t *rom,
-              const char *name);
+void amk_dump(const rom_t *rom,
+              const char *rom_name,
+              const char *out_path);
 
 #endif

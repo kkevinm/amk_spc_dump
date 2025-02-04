@@ -8,6 +8,7 @@
 #define AMK_NAME_STRING            "@AMK"
 #define AMK_SAMPLE_GROUPS_PTR_ADDR (AMK_NAME_ADDR + 4 + 1)
 #define AMK_MUSIC_PTR_ADDR         (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
+#define AMK_SPC_ENGINE_ADDR        (0x0F8000)
 
 typedef struct
 {
@@ -22,10 +23,22 @@ typedef struct
     buffer_t *music_data;
 } amk_music_t;
 
-void amk_dump(rom_t *rom,
-              const char *rom_name)
+static void amk_dump_private(const amk_music_t *songs,
+                             const buffer_t *spc_engine,
+                             const char *rom_name,
+                             const char *out_path)
 {
-    buffer_t *buffer;
+    (void)songs;
+    (void)spc_engine;
+    (void)rom_name;
+    (void)out_path;
+}
+
+void amk_dump(const rom_t *rom,
+              const char *rom_name,
+              const char *out_path)
+{
+    buffer_t *buffer, *spc_engine;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
     int music_num, samples_num, i;
     amk_sample_t *samples;
@@ -148,31 +161,68 @@ void amk_dump(rom_t *rom,
     }
     for (i = 0; i < music_num; i++)
     {
+        uint32_t music_data_ptr;
         uint32_t sample_group_ptr;
         //******************
+        music_data_ptr = rom_read_long(rom,
+                                       music_ptr + (i * 3));
+        if (music_data_ptr == 0)
+        {
+            songs[i].music_data = NULL;
+        }
+        else
+        {
+            uint16_t music_len;
+            //******************
+            music_len = rom_read_word(rom,
+                                      music_data_ptr);
+            songs[i].music_data = rom_read_buffer(rom,
+                                                  music_data_ptr + 2,
+                                                  (uint32_t)music_len);
+        }
         sample_group_ptr = (uint32_t)rom_read_word(rom,
                                                    sample_groups_ptr + (i * 2));
-        /* Check song with no samples (should just be song 0) */
         if (sample_group_ptr == 0)
         {
-            
+            songs[i].samples_num = 0;
+            songs[i].samples_ptr = NULL;
         }
         else
         {
             int j;
             //******************
-            /* Add bank byte to sample group pointer */
             sample_group_ptr |= (sample_groups_ptr & 0xFF0000);
             songs[i].samples_num = rom_read_byte(rom,
                                                  sample_group_ptr);
             songs[i].samples_ptr = (amk_sample_t **)malloc(sizeof(amk_sample_t *) * songs[i].samples_num);
             for (j = 0; j < songs[i].samples_num; j++)
             {
-                
+                uint16_t curr_sample;
+                //******************
+                curr_sample = rom_read_word(rom,
+                                            sample_group_ptr + 1 + (j * 2));
+                if (curr_sample < samples_num)
+                {
+                    songs[i].samples_ptr[j] = &samples[i];
+                }
+                else
+                {
+                    songs[i].samples_ptr[j] = NULL;
+                }
             }
         }
     }
+    /* Get SPC engine data */
+    spc_engine = rom_read_buffer(rom,
+                                 AMK_SPC_ENGINE_ADDR + 2,
+                                 rom_read_word(rom,
+                                               AMK_SPC_ENGINE_ADDR));
+    amk_dump_private(songs,
+                     spc_engine,
+                     rom_name,
+                     out_path);
     /* Destroy everything */
+    free(buffer);
     for (i = 0; i < samples_num; i++)
     {
         free(samples[i].data);
@@ -184,4 +234,5 @@ void amk_dump(rom_t *rom,
         free(songs[i].music_data);
     }
     free(songs);
+    free(spc_engine);
 }

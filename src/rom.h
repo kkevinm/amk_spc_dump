@@ -36,16 +36,16 @@ rom_t *rom_create_from_file(const char *path);
 
 void rom_destroy(rom_t *rom);
 
-uint8_t rom_read_byte(rom_t *rom,
+uint8_t rom_read_byte(const rom_t *rom,
                       uint32_t snes_addr);
 
-uint16_t rom_read_word(rom_t *rom,
+uint16_t rom_read_word(const rom_t *rom,
                        uint32_t snes_addr);
 
-uint32_t rom_read_long(rom_t *rom,
+uint32_t rom_read_long(const rom_t *rom,
                        uint32_t snes_addr);
 
-buffer_t *rom_read_buffer(rom_t *rom,
+buffer_t *rom_read_buffer(const rom_t *rom,
                           uint32_t snes_addr,
                           size_t size);
 

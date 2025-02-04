@@ -12,6 +12,8 @@ typedef struct
 
 buffer_t *buffer_create(size_t size);
 
+buffer_t *buffer_copy(const buffer_t *buffer);
+
 void buffer_destroy(buffer_t *buffer);
 
 FILE *file_open(const char *path,

@@ -12,10 +12,10 @@ int main(int argc,
     rom_t *rom;
     char *rom_name, *tmp;
     //******************
-    if (argc < 2)
+    if (argc < 3)
     {
         fprintf(stderr,
-                "Missing argument: ROM path\n");
+                "Usage: amk_spc_dump <ROM path> <output path>\n");
         return -1;
     }
     rom = rom_create_from_file(argv[1]);
@@ -45,7 +45,8 @@ int main(int argc,
         *tmp = '\0';
     }
     amk_dump(rom,
-             rom_name);
+             rom_name,
+             argv[2]);
     rom_destroy(rom);
     free(rom_name);
     return 0;

@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <stdlib.h>
+#include <string.h>
 
 buffer_t *buffer_create(size_t size)
 {
@@ -19,6 +20,24 @@ buffer_t *buffer_create(size_t size)
         }
     }
     return buffer;
+}
+
+buffer_t *buffer_copy(const buffer_t *buffer)
+{
+    buffer_t *copy;
+    //******************
+    if (buffer == NULL)
+    {
+        return NULL;
+    }
+    copy = buffer_create(buffer->size);
+    if (copy != NULL)
+    {
+        memcpy(copy->data,
+               buffer->data,
+               buffer->size);
+    }
+    return copy;
 }
 
 void buffer_destroy(buffer_t *buffer)
