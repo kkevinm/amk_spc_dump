@@ -4,7 +4,7 @@ INC=
 LD=
 SRC=src/amk_dump.c src/main.c src/rom.c src/utils.c
 OUT=build
-EXE=amk_spc_dump.exe
+EXE=amk_spc_dump
 
 .PHONY: clean
 
