@@ -21,12 +21,14 @@ FILE *file_open(const char *path,
 
 size_t file_size(FILE *file);
 
-buffer_t *file_read_all(FILE *file);
+buffer_t *file_read_all(FILE *file,
+                        size_t max_size);
 
 void file_write_all(FILE *file,
                     const buffer_t *buffer);
 
-buffer_t *file_open_and_read_all(const char *path);
+buffer_t *file_open_and_read_all(const char *path,
+                                 size_t max_size);
 
 void file_open_and_write_all(const char *path,
                              const buffer_t *buffer);

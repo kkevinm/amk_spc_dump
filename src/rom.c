@@ -298,7 +298,8 @@ rom_t *rom_create_from_buffer(buffer_t *buffer)
 
 rom_t *rom_create_from_file(const char *path)
 {
-    return rom_create_from_buffer(file_open_and_read_all(path));
+    return rom_create_from_buffer(file_open_and_read_all(path,
+                                                         ROM_MAX_SIZE));
 }
 
 void rom_destroy(rom_t *rom)

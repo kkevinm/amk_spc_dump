@@ -65,7 +65,7 @@ FILE *file_open(const char *path,
     return file;
 }
 
-size_t file_size(FILE *file)
+size_t file_get_size(FILE *file)
 {
     size_t size;
     long offset;
@@ -81,11 +81,18 @@ size_t file_size(FILE *file)
     return size;
 }
 
-buffer_t *file_read_all(FILE *file)
+buffer_t *file_read_all(FILE *file,
+                        size_t max_size)
 {
     buffer_t *buffer;
+    size_t read_size;
     //******************
-    buffer = buffer_create(file_size(file));
+    read_size = file_get_size(file);
+    if (read_size > max_size)
+    {
+        read_size = max_size;
+    }
+    buffer = buffer_create(read_size);
     if (buffer != NULL)
     {
         fread(buffer->data,
@@ -108,14 +115,16 @@ void file_write_all(FILE *file,
     }
 }
 
-buffer_t *file_open_and_read_all(const char *path)
+buffer_t *file_open_and_read_all(const char *path,
+                                 size_t max_size)
 {
     FILE *file;
     buffer_t *buffer;
     //******************
     file = file_open(path,
                      "r");
-    buffer = file_read_all(file);
+    buffer = file_read_all(file,
+                           max_size);
     fclose(file);
     return buffer;
 }

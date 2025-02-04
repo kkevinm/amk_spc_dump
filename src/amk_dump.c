@@ -2,7 +2,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
 #include "rom.h"
+#include "spc.h"
+
+#define DUMPER_NAME                "AMK Dumper v1.0"
 
 #define AMK_NAME_ADDR              (0x0E8000)
 #define AMK_NAME_STRING            "@AMK"
@@ -23,20 +27,45 @@ typedef struct
     buffer_t *music_data;
 } amk_music_t;
 
-static void amk_dump_private(const amk_music_t *songs,
-                             const buffer_t *spc_engine,
-                             const char *rom_name,
-                             const char *out_path)
+static void amk_dump_spc(const amk_music_t *song,
+                         const buffer_t *spc_engine,
+                         const char *spc_file_path,
+                         const char *game_name,
+                         const char *song_length,
+                         const char *fade_length)
 {
-    (void)songs;
-    (void)spc_engine;
-    (void)rom_name;
-    (void)out_path;
+    spc_t spc;
+    buffer_t buffer;
+    time_t t;
+    struct tm time_handle;
+    //******************
+    spc_init(&spc);
+    spc_set_game_title(&spc,
+                       game_name);
+    spc_set_dumper(&spc,
+                   DUMPER_NAME);
+    spc_set_song_length_s(&spc,
+                          song_length);
+    spc_set_fade_length_ms(&spc,
+                           fade_length);
+    t = time(NULL);
+    time_handle = *localtime(&t);
+    spc_set_dump_date(&spc,
+                      time_handle.tm_mday,
+                      time_handle.tm_mon + 1,
+                      time_handle.tm_year + 1900);
+    // TODO regs and ram
+    buffer.data = (uint8_t *)&spc;
+    buffer.size = sizeof(spc);
+    file_open_and_write_all(spc_file_path,
+                            &buffer);
 }
 
 void amk_dump(const rom_t *rom,
               const char *rom_name,
-              const char *out_path)
+              const char *out_path,
+              const char *default_song_length,
+              const char *default_fade_length)
 {
     buffer_t *buffer, *spc_engine;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
@@ -217,10 +246,25 @@ void amk_dump(const rom_t *rom,
                                  AMK_SPC_ENGINE_ADDR + 2,
                                  rom_read_word(rom,
                                                AMK_SPC_ENGINE_ADDR));
-    amk_dump_private(songs,
+    // TODO restore
+    for (i = 10; i < 11; i++)
+    //for (i = 0; i < music_num; i++)
+    {
+        char spc_file_path[500];
+        //******************
+        snprintf(spc_file_path,
+                 sizeof(spc_file_path),
+                 "%s/%s_%02X.spc",
+                 out_path,
+                 rom_name,
+                 i);
+        amk_dump_spc(&songs[i],
                      spc_engine,
+                     spc_file_path,
                      rom_name,
-                     out_path);
+                     default_song_length,
+                     default_fade_length);
+    }
     /* Destroy everything */
     free(buffer);
     for (i = 0; i < samples_num; i++)

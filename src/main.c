@@ -12,10 +12,10 @@ int main(int argc,
     rom_t *rom;
     char *rom_name, *tmp;
     //******************
-    if (argc < 3)
+    if (argc < 5)
     {
         fprintf(stderr,
-                "Usage: amk_spc_dump <ROM path> <output path>\n");
+                "Usage: amk_spc_dump <rom path> <output path> <song length in s> <fade length in ms>\n");
         return -1;
     }
     rom = rom_create_from_file(argv[1]);
@@ -46,7 +46,9 @@ int main(int argc,
     }
     amk_dump(rom,
              rom_name,
-             argv[2]);
+             argv[2],
+             argv[3],
+             argv[4]);
     rom_destroy(rom);
     free(rom_name);
     return 0;
