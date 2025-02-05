@@ -14,6 +14,10 @@
 #define AMK_MUSIC_PTR_ADDR         (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
 #define AMK_SPC_ENGINE_ADDR        (0x0F8000)
 
+/* TODO: check if these can be inferred from SPC engine data or rom */
+#define AMK_SPC_ENGINE_RAM_POS     (0x400)
+#define AMK_SPC_MAIN_LOOP_RAM_POS  (0x42F)
+
 typedef struct
 {
     buffer_t *data;
@@ -38,6 +42,9 @@ static void amk_dump_spc(const amk_music_t *song,
     buffer_t buffer;
     time_t t;
     struct tm time_handle;
+    uint16_t spc_ram_index;
+    uint16_t spc_sample_index;
+    uint8_t i;
     //******************
     spc_init(&spc);
     spc_set_game_title(&spc,
@@ -54,7 +61,85 @@ static void amk_dump_spc(const amk_music_t *song,
                       time_handle.tm_mday,
                       time_handle.tm_mon + 1,
                       time_handle.tm_year + 1900);
-    // TODO regs and ram
+    /* Copy the SPC engine */
+    spc_ram_index = AMK_SPC_ENGINE_RAM_POS;
+    memcpy(&spc.ram[spc_ram_index],
+           spc_engine->data,
+           spc_engine->size);
+    spc_ram_index += (uint16_t)spc_engine->size;
+    /* Copy the music data */
+    if (song->music_data != NULL)
+    {
+        memcpy(&spc.ram[spc_ram_index],
+               song->music_data->data,
+               song->music_data->size);
+        spc_ram_index += (uint16_t)song->music_data->size;
+    }
+    /* Make the index aligned to 0x100 for the samples table */
+    if ((spc_ram_index & 0xFF) != 0)
+    {
+        spc_ram_index = (spc_ram_index & 0xFF00) + 0x100;
+    }
+    /* Make space for the sample table before the samples data */
+    spc_sample_index = spc_ram_index + (4 * (uint16_t)song->samples_num);
+    /* Set the sample table address in the DSP */
+    spc.dsp.sample_table_address = spc_ram_index >> 8;
+    /* Copy the sample data and setup the samples table */
+    for (i = 0; i < song->samples_num; i++)
+    {
+        bool dup_sample;
+        uint8_t j;
+        //******************
+        dup_sample = false;
+        for (j = 0; j < i; j++)
+        {
+            /* If the sample is duplicated, copy the table data but not the sample data */
+            if (song->samples_ptr[j] == song->samples_ptr[i])
+            {
+                uint16_t dup_spc_sample_index;
+                //******************
+                dup_spc_sample_index = spc_ram_index + ((j - i) * 4);
+                spc.ram[spc_ram_index + 0] = spc.ram[dup_spc_sample_index + 0];
+                spc.ram[spc_ram_index + 1] = spc.ram[dup_spc_sample_index + 1];
+                spc.ram[spc_ram_index + 2] = spc.ram[dup_spc_sample_index + 2];
+                spc.ram[spc_ram_index + 3] = spc.ram[dup_spc_sample_index + 3];
+                dup_sample = true;
+                break;
+            }
+        }
+        if (!dup_sample)
+        {
+            uint16_t loop_point;
+            //******************
+            loop_point = spc_sample_index + song->samples_ptr[i]->loop_point;
+            spc.ram[spc_ram_index + 0] = (uint8_t)spc_sample_index;
+            spc.ram[spc_ram_index + 1] = (uint8_t)(spc_sample_index >> 8);
+            spc.ram[spc_ram_index + 2] = (uint8_t)loop_point;
+            spc.ram[spc_ram_index + 3] = (uint8_t)(loop_point >> 8);
+            memcpy(&spc.ram[spc_sample_index],
+                   song->samples_ptr[i]->data->data,
+                   song->samples_ptr[i]->data->size);
+            spc_sample_index += song->samples_ptr[i]->data->size;
+        }
+        spc_ram_index += 4;
+    }
+    /* Set some DSP registers */
+    spc.dsp.left_master_volume = 0x7F;
+    spc.dsp.echo_feedback = 0x60;
+    spc.dsp.right_master_volume = 0x7F;
+    spc.dsp.misc_flags = 0x2F;
+    spc.dsp.echo_buffer_address = 0x60;
+    /*
+     * This should be the DSP flags mirror in ram but AMK sets it to a
+     * different value than spc.dsp.misc_flags... I won't question it
+     */
+    spc.ram[0x5F] = 0x20;
+    /* Tell the engine to play this song (TODO: don't use hardcoded value) */
+    spc.ram[0xF6] = 0xA;
+    /* Set the initial SPC PC */
+    ((uint8_t *)&spc.regs.pc)[0] = (uint8_t)AMK_SPC_MAIN_LOOP_RAM_POS;
+    ((uint8_t *)&spc.regs.pc)[1] = (uint8_t)(AMK_SPC_MAIN_LOOP_RAM_POS >> 8);
+    /* Write the SPC data to the file */
     buffer.data = (uint8_t *)&spc;
     buffer.size = sizeof(spc);
     file_open_and_write_all(spc_file_path,
