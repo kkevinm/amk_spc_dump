@@ -23,5 +23,5 @@ $0F8000: SPC driver
     - x = read2($008053)
     - read2(x+3)+((read1(x+15))<<16)
 
-Music and samples have a 2 byte header with size -> actual data starts at [pointer]+2
-The SPC engine has a 4 byte header with size + program start position in SPC ram -> actual data starts at [pointer]+4
+Samples have a 2 byte header with size -> actual data starts at [pointer]+2
+The SPC engine and music have a 4 byte header with size + load position in SPC ram -> actual data starts at [pointer]+4

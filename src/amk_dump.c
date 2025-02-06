@@ -60,6 +60,7 @@ typedef struct
     amk_sample_t **samples_ptr;
     uint8_t samples_num;
     buffer_t *music_data;
+    uint16_t start_address;
 } amk_music_t;
 
 static uint16_t amk_get_spc_main_loop_pos(const spc_t *spc,
@@ -126,14 +127,18 @@ static void amk_dump_spc(const amk_music_t *song,
     memcpy(&spc.ram[spc_ram_index],
            spc_engine->data->data,
            spc_engine->data->size);
-    spc_ram_index += (uint16_t)spc_engine->data->size;
     /* Copy the music data */
     if (song->music_data != NULL)
     {
+        spc_ram_index = song->start_address;
         memcpy(&spc.ram[spc_ram_index],
                song->music_data->data,
                song->music_data->size);
         spc_ram_index += (uint16_t)song->music_data->size;
+    }
+    else
+    {
+        spc_ram_index += (uint16_t)spc_engine->data->size;
     }
     /* Make the index aligned to 0x100 for the samples table */
     if ((spc_ram_index & 0xFF) != 0)
@@ -335,7 +340,7 @@ void amk_dump(const rom_t *rom,
                                        sample_table_ptr);
             samples[i].data = rom_read_buffer(rom,
                                               sample_table_ptr + 2,
-                                                (uint32_t)sample_len);
+                                              (uint32_t)sample_len);
             samples[i].loop_point = rom_read_word(rom,
                                                   loops_ptr + (i * 2));
         }
@@ -365,8 +370,10 @@ void amk_dump(const rom_t *rom,
             //******************
             music_len = rom_read_word(rom,
                                       music_data_ptr);
+            songs[i].start_address = rom_read_word(rom,
+                                                   music_data_ptr + 2);
             songs[i].music_data = rom_read_buffer(rom,
-                                                  music_data_ptr + 2,
+                                                  music_data_ptr + 4,
                                                   (uint32_t)music_len);
         }
         sample_group_ptr = (uint32_t)rom_read_word(rom,
