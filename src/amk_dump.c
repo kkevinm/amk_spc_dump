@@ -6,17 +6,46 @@
 #include "rom.h"
 #include "spc.h"
 
-#define DUMPER_NAME                "AMK Dumper v1.0"
+#define DUMPER_NAME                         "AMK Dumper v1.0"
 
-#define AMK_NAME_ADDR              (0x0E8000)
-#define AMK_NAME_STRING            "@AMK"
-#define AMK_SAMPLE_GROUPS_PTR_ADDR (AMK_NAME_ADDR + 4 + 1)
-#define AMK_MUSIC_PTR_ADDR         (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
-#define AMK_SPC_ENGINE_ADDR        (0x0F8000)
+#define AMK_NAME_ADDR                       (0x0E8000)
+#define AMK_NAME_STRING                     "@AMK"
+#define AMK_SAMPLE_GROUPS_PTR_ADDR          (AMK_NAME_ADDR + 4 + 1)
+#define AMK_MUSIC_PTR_ADDR                  (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
+#define AMK_SPC_ENGINE_ADDR                 (0x0F8000)
 
-/* TODO: check if these can be inferred from SPC engine data or rom */
-#define AMK_SPC_ENGINE_RAM_POS     (0x400)
-#define AMK_SPC_MAIN_LOOP_RAM_POS  (0x42F)
+#define AMK_SPC_MAIN_LOOP_RAM_POS           (0x434)
+
+#define AMK_SPC_DEFAULT_SP_LOW              (0xCF)
+
+#define AMK_SPC_RAM_MISC_FLAGS_MIRROR_ADDR  (0x5F)
+#define AMK_SPC_DEFAULT_MISC_FLAGS_MIRROR   (0x20)
+#define AMK_SPC_RAM_SONG_NUMBER_ADDR        (0xF6)
+#define AMK_SPC_RAM_TEMPO_ADDR              (0x51)
+#define AMK_SPC_DEFAULT_TEMPO               (0x36)
+#define AMK_SPC_RAM_REGISTERS_ADDR          (0xF0)
+
+#define AMK_SPC_DEFAULT_LEFT_MASTER_VOLUME  (0x7F)
+#define AMK_SPC_DEFAULT_RIGHT_MASTER_VOLUME (0x7F)
+#define AMK_SPC_DEFAULT_ECHO_FEEDBACK       (0x60)
+#define AMK_SPC_DEFAULT_MISC_FLAGS          (0x2F)
+#define AMK_SPC_DEFAULT_ECHO_BUFFER_ADDRESS (0x60)
+
+const uint8_t amk_spc_default_ram_registers[] =
+{
+    0xFF, 0x31, 0x4C, 0x0F, 0x00, 0x00, 0x0A, 0x00, 0xFF, 0xFF, 0x10, 0xFF, 0xFF, 0x00, 0xFF, 0xFF
+};
+
+const uint8_t amk_spc_main_loop_pos_bytes[] =
+{
+    0xEB, 0xFD, 0xF0, 0xFC
+};
+
+typedef struct
+{
+    buffer_t *data;
+    uint16_t start_address;
+} amk_spc_engine_t;
 
 typedef struct
 {
@@ -31,8 +60,38 @@ typedef struct
     buffer_t *music_data;
 } amk_music_t;
 
+static uint16_t amk_get_spc_main_loop_pos(const spc_t *spc,
+                                          uint16_t start_pos)
+{
+    int i;
+    uint16_t bytes_found_pos;
+    //******************
+    bytes_found_pos = 0;
+    /*
+     * Look for the main loop starting bytes... if not found
+     * after a while, just use the default position and hope
+     * for the best
+     */
+    for (i = 0; i < 100; i++)
+    {
+        if (spc->ram[start_pos + i] == amk_spc_main_loop_pos_bytes[bytes_found_pos])
+        {
+            bytes_found_pos++;
+            if (bytes_found_pos >= sizeof(amk_spc_main_loop_pos_bytes))
+            {
+                return start_pos + i - sizeof(amk_spc_main_loop_pos_bytes) + 1;
+            }
+        }
+        else
+        {
+            bytes_found_pos = 0;
+        }
+    }
+    return AMK_SPC_MAIN_LOOP_RAM_POS;
+}
+
 static void amk_dump_spc(const amk_music_t *song,
-                         const buffer_t *spc_engine,
+                         const amk_spc_engine_t *spc_engine,
                          const char *spc_file_path,
                          const char *game_name,
                          const char *song_length,
@@ -42,8 +101,7 @@ static void amk_dump_spc(const amk_music_t *song,
     buffer_t buffer;
     time_t t;
     struct tm time_handle;
-    uint16_t spc_ram_index;
-    uint16_t spc_sample_index;
+    uint16_t spc_ram_index, spc_sample_index, spc_main_loop_index;
     uint8_t i;
     //******************
     spc_init(&spc);
@@ -62,11 +120,11 @@ static void amk_dump_spc(const amk_music_t *song,
                       time_handle.tm_mon + 1,
                       time_handle.tm_year + 1900);
     /* Copy the SPC engine */
-    spc_ram_index = AMK_SPC_ENGINE_RAM_POS;
+    spc_ram_index = spc_engine->start_address;
     memcpy(&spc.ram[spc_ram_index],
-           spc_engine->data,
-           spc_engine->size);
-    spc_ram_index += (uint16_t)spc_engine->size;
+           spc_engine->data->data,
+           spc_engine->data->size);
+    spc_ram_index += (uint16_t)spc_engine->data->size;
     /* Copy the music data */
     if (song->music_data != NULL)
     {
@@ -124,21 +182,31 @@ static void amk_dump_spc(const amk_music_t *song,
         spc_ram_index += 4;
     }
     /* Set some DSP registers */
-    spc.dsp.left_master_volume = 0x7F;
-    spc.dsp.echo_feedback = 0x60;
-    spc.dsp.right_master_volume = 0x7F;
-    spc.dsp.misc_flags = 0x2F;
-    spc.dsp.echo_buffer_address = 0x60;
+    spc.dsp.left_master_volume = AMK_SPC_DEFAULT_LEFT_MASTER_VOLUME;
+    spc.dsp.echo_feedback = AMK_SPC_DEFAULT_ECHO_FEEDBACK;
+    spc.dsp.right_master_volume = AMK_SPC_DEFAULT_RIGHT_MASTER_VOLUME;
+    spc.dsp.misc_flags = AMK_SPC_DEFAULT_MISC_FLAGS;
+    spc.dsp.echo_buffer_address = AMK_SPC_DEFAULT_ECHO_BUFFER_ADDRESS;
+    /* Set the default tempo */
+    spc.ram[AMK_SPC_RAM_TEMPO_ADDR] = AMK_SPC_DEFAULT_TEMPO;
     /*
      * This should be the DSP flags mirror in ram but AMK sets it to a
      * different value than spc.dsp.misc_flags... I won't question it
      */
-    spc.ram[0x5F] = 0x20;
+    spc.ram[AMK_SPC_RAM_MISC_FLAGS_MIRROR_ADDR] = AMK_SPC_DEFAULT_MISC_FLAGS_MIRROR;
+    /* Set the default ram registers */
+    memcpy(&spc.ram[AMK_SPC_RAM_REGISTERS_ADDR],
+           amk_spc_default_ram_registers,
+           sizeof(amk_spc_default_ram_registers));
     /* Tell the engine to play this song (TODO: don't use hardcoded value) */
-    spc.ram[0xF6] = 0xA;
+    spc.ram[AMK_SPC_RAM_SONG_NUMBER_ADDR] = 0xA;
     /* Set the initial SPC PC */
-    ((uint8_t *)&spc.regs.pc)[0] = (uint8_t)AMK_SPC_MAIN_LOOP_RAM_POS;
-    ((uint8_t *)&spc.regs.pc)[1] = (uint8_t)(AMK_SPC_MAIN_LOOP_RAM_POS >> 8);
+    spc_main_loop_index = amk_get_spc_main_loop_pos(&spc,
+                                                    spc_engine->start_address);
+    ((uint8_t *)&spc.regs.pc)[0] = (uint8_t)spc_main_loop_index;
+    ((uint8_t *)&spc.regs.pc)[1] = (uint8_t)(spc_main_loop_index >> 8);
+    /* Set the initial SPC SP */
+    spc.regs.sp_low = AMK_SPC_DEFAULT_SP_LOW;
     /* Write the SPC data to the file */
     buffer.data = (uint8_t *)&spc;
     buffer.size = sizeof(spc);
@@ -152,9 +220,10 @@ void amk_dump(const rom_t *rom,
               const char *default_song_length,
               const char *default_fade_length)
 {
-    buffer_t *buffer, *spc_engine;
+    buffer_t *buffer;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
     int music_num, samples_num, i;
+    amk_spc_engine_t spc_engine;
     amk_sample_t *samples;
     amk_music_t *songs;
     //******************
@@ -327,10 +396,12 @@ void amk_dump(const rom_t *rom,
         }
     }
     /* Get SPC engine data */
-    spc_engine = rom_read_buffer(rom,
-                                 AMK_SPC_ENGINE_ADDR + 2,
-                                 rom_read_word(rom,
-                                               AMK_SPC_ENGINE_ADDR));
+    spc_engine.start_address = rom_read_word(rom,
+                                             AMK_SPC_ENGINE_ADDR + 2);
+    spc_engine.data = rom_read_buffer(rom,
+                                      AMK_SPC_ENGINE_ADDR + 4,
+                                      rom_read_word(rom,
+                                                    AMK_SPC_ENGINE_ADDR));
     // TODO restore
     for (i = 10; i < 11; i++)
     //for (i = 1; i < music_num; i++)
@@ -344,7 +415,7 @@ void amk_dump(const rom_t *rom,
                  rom_name,
                  i);
         amk_dump_spc(&songs[i],
-                     spc_engine,
+                     &spc_engine,
                      spc_file_path,
                      rom_name,
                      default_song_length,
@@ -363,5 +434,5 @@ void amk_dump(const rom_t *rom,
         free(songs[i].music_data);
     }
     free(songs);
-    free(spc_engine);
+    free(spc_engine.data);
 }
