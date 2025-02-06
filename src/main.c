@@ -11,11 +11,20 @@ int main(int argc,
 {
     rom_t *rom;
     char *rom_name, *tmp;
+    int yoshi_drums_enable;
     //******************
-    if (argc < 5)
+    if (argc < 6)
     {
         fprintf(stderr,
-                "Usage: amk_spc_dump <rom path> <output path> <song length in s> <fade length in ms>\n");
+                "Usage: amk_spc_dump <rom path> <output path> <song length in s> <fade length in ms> <yoshi drums enable (0 or 1)>\n");
+        return -1;
+    }
+    if (sscanf(argv[5],
+               "%d",
+               &yoshi_drums_enable) != 1)
+    {
+        fprintf(stderr,
+                "Error: yoshi drums enable flag has an invalid value\n");
         return -1;
     }
     rom = rom_create_from_file(argv[1]);
@@ -48,7 +57,8 @@ int main(int argc,
              rom_name,
              argv[2],
              argv[3],
-             argv[4]);
+             argv[4],
+             yoshi_drums_enable != 0);
     rom_destroy(rom);
     free(rom_name);
     return 0;

@@ -18,12 +18,14 @@
 
 #define AMK_SPC_DEFAULT_SP_LOW              (0xCF)
 
-#define AMK_SPC_RAM_MISC_FLAGS_MIRROR_ADDR  (0x5F)
-#define AMK_SPC_DEFAULT_MISC_FLAGS_MIRROR   (0x20)
-#define AMK_SPC_RAM_SONG_NUMBER_ADDR        (0xF6)
-#define AMK_SPC_RAM_TEMPO_ADDR              (0x51)
-#define AMK_SPC_DEFAULT_TEMPO               (0x36)
-#define AMK_SPC_RAM_REGISTERS_ADDR          (0xF0)
+#define AMK_SPC_RAM_MISC_FLAGS_MIRROR_ADDR   (0x5F)
+#define AMK_SPC_DEFAULT_MISC_FLAGS_MIRROR    (0x20)
+#define AMK_SPC_RAM_YOSHI_DRUMS_COMMAND_ADDR (0xF5)
+#define AMK_SPC_ENABLE_YOSHI_DRUMS           (0x02)
+#define AMK_SPC_RAM_SONG_NUMBER_ADDR         (0xF6)
+#define AMK_SPC_RAM_TEMPO_ADDR               (0x51)
+#define AMK_SPC_DEFAULT_TEMPO                (0x36)
+#define AMK_SPC_RAM_REGISTERS_ADDR           (0xF0)
 
 #define AMK_SPC_DEFAULT_LEFT_MASTER_VOLUME  (0x7F)
 #define AMK_SPC_DEFAULT_RIGHT_MASTER_VOLUME (0x7F)
@@ -68,9 +70,8 @@ static uint16_t amk_get_spc_main_loop_pos(const spc_t *spc,
     //******************
     bytes_found_pos = 0;
     /*
-     * Look for the main loop starting bytes... if not found
-     * after a while, just use the default position and hope
-     * for the best
+     * Look for the main loop starting bytes... if not found after a while,
+     * just use the default position and hope for the best
      */
     for (i = 0; i < 100; i++)
     {
@@ -95,7 +96,8 @@ static void amk_dump_spc(const amk_music_t *song,
                          const char *spc_file_path,
                          const char *game_name,
                          const char *song_length,
-                         const char *fade_length)
+                         const char *fade_length,
+                         bool yoshi_drums_enable)
 {
     spc_t spc;
     buffer_t buffer;
@@ -200,6 +202,11 @@ static void amk_dump_spc(const amk_music_t *song,
            sizeof(amk_spc_default_ram_registers));
     /* Tell the engine to play this song (TODO: don't use hardcoded value) */
     spc.ram[AMK_SPC_RAM_SONG_NUMBER_ADDR] = 0xA;
+    /* Enable Yoshi drums if enabled */
+    if (yoshi_drums_enable)
+    {
+        spc.ram[AMK_SPC_RAM_YOSHI_DRUMS_COMMAND_ADDR] = AMK_SPC_ENABLE_YOSHI_DRUMS;
+    }
     /* Set the initial SPC PC */
     spc_main_loop_index = amk_get_spc_main_loop_pos(&spc,
                                                     spc_engine->start_address);
@@ -218,7 +225,8 @@ void amk_dump(const rom_t *rom,
               const char *rom_name,
               const char *out_path,
               const char *default_song_length,
-              const char *default_fade_length)
+              const char *default_fade_length,
+              bool yoshi_drums_enable)
 {
     buffer_t *buffer;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
@@ -272,7 +280,6 @@ void amk_dump(const rom_t *rom,
         music_num++;
         samples_ptr += 3;
     } while (tmp != 0xFFFFFF);
-    samples_ptr += 3;
     /* Find samples number and sample loops pointer */
     samples_num = -1;
     loops_ptr = samples_ptr;
@@ -283,7 +290,6 @@ void amk_dump(const rom_t *rom,
         samples_num++;
         loops_ptr += 3;
     } while (tmp != 0xFFFFFF);
-    loops_ptr += 3;
 
     printf("Song pointers table located at $%06X with %d songs\n",
            music_ptr,
@@ -386,7 +392,7 @@ void amk_dump(const rom_t *rom,
                                             sample_group_ptr + 1 + (j * 2));
                 if (curr_sample < samples_num)
                 {
-                    songs[i].samples_ptr[j] = &samples[i];
+                    songs[i].samples_ptr[j] = &samples[curr_sample];
                 }
                 else
                 {
@@ -419,7 +425,8 @@ void amk_dump(const rom_t *rom,
                      spc_file_path,
                      rom_name,
                      default_song_length,
-                     default_fade_length);
+                     default_fade_length,
+                     yoshi_drums_enable);
     }
     /* Destroy everything */
     free(buffer);

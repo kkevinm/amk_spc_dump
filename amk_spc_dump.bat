@@ -1,6 +1,9 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+:: Change to "0" to disable Yoshi drums in all the SPCs
+set YOSHI_DRUMS="1"
+
 :: TODO change back
 ::set /p ROM="ROM path: "
 set ROM="beans.smc"
@@ -16,7 +19,7 @@ if exist "!OUT!" (
 mkdir "!OUT!" > nul
 
 :: TODO remove .\build
-.\build\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!"
+.\build\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!"
 
 :: TODO restore
 ::pause
