@@ -122,7 +122,7 @@ buffer_t *file_open_and_read_all(const char *path,
     buffer_t *buffer;
     //******************
     file = file_open(path,
-                     "r");
+                     "rb");
     buffer = file_read_all(file,
                            max_size);
     fclose(file);
@@ -135,7 +135,7 @@ void file_open_and_write_all(const char *path,
     FILE *file;
     //******************
     file = file_open(path,
-                     "w");
+                     "wb");
     file_write_all(file,
                    buffer);
     fclose(file);
