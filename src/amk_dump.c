@@ -6,17 +6,17 @@
 #include "rom.h"
 #include "spc.h"
 
-#define DUMPER_NAME                         "AMK Dumper v1.0"
+#define DUMPER_NAME                          "AMK Dumper v1.0"
 
-#define AMK_NAME_ADDR                       (0x0E8000)
-#define AMK_NAME_STRING                     "@AMK"
-#define AMK_SAMPLE_GROUPS_PTR_ADDR          (AMK_NAME_ADDR + 4 + 1)
-#define AMK_MUSIC_PTR_ADDR                  (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
-#define AMK_SPC_ENGINE_ADDR                 (0x0F8000)
+#define AMK_NAME_ADDR                        (0x0E8000)
+#define AMK_NAME_STRING                      "@AMK"
+#define AMK_SAMPLE_GROUPS_PTR_ADDR           (AMK_NAME_ADDR + 4 + 1)
+#define AMK_MUSIC_PTR_ADDR                   (AMK_SAMPLE_GROUPS_PTR_ADDR + 3)
+#define AMK_SPC_ENGINE_ADDR                  (0x0F8000)
 
-#define AMK_SPC_MAIN_LOOP_RAM_POS           (0x434)
+#define AMK_SPC_MAIN_LOOP_RAM_POS            (0x434)
 
-#define AMK_SPC_DEFAULT_SP_LOW              (0xCF)
+#define AMK_SPC_DEFAULT_SP_LOW               (0xCF)
 
 #define AMK_SPC_RAM_MISC_FLAGS_MIRROR_ADDR   (0x5F)
 #define AMK_SPC_DEFAULT_MISC_FLAGS_MIRROR    (0x20)
@@ -27,11 +27,13 @@
 #define AMK_SPC_DEFAULT_TEMPO                (0x36)
 #define AMK_SPC_RAM_REGISTERS_ADDR           (0xF0)
 
-#define AMK_SPC_DEFAULT_LEFT_MASTER_VOLUME  (0x7F)
-#define AMK_SPC_DEFAULT_RIGHT_MASTER_VOLUME (0x7F)
-#define AMK_SPC_DEFAULT_ECHO_FEEDBACK       (0x60)
-#define AMK_SPC_DEFAULT_MISC_FLAGS          (0x2F)
-#define AMK_SPC_DEFAULT_ECHO_BUFFER_ADDRESS (0x60)
+#define AMK_SPC_DEFAULT_LEFT_MASTER_VOLUME   (0x7F)
+#define AMK_SPC_DEFAULT_RIGHT_MASTER_VOLUME  (0x7F)
+#define AMK_SPC_DEFAULT_ECHO_FEEDBACK        (0x60)
+#define AMK_SPC_DEFAULT_MISC_FLAGS           (0x2F)
+#define AMK_SPC_DEFAULT_ECHO_BUFFER_ADDRESS  (0x60)
+
+#define AMK_SPC_INVALID_SONG_ID              (0x00)
 
 const uint8_t amk_spc_default_ram_registers[] =
 {
@@ -61,6 +63,7 @@ typedef struct
     uint8_t samples_num;
     buffer_t *music_data;
     uint16_t start_address;
+    uint8_t spc_song_id;
 } amk_music_t;
 
 static uint16_t amk_get_spc_main_loop_pos(const spc_t *spc,
@@ -107,6 +110,10 @@ static void amk_dump_spc(const amk_music_t *song,
     uint16_t spc_ram_index, spc_sample_index, spc_main_loop_index;
     uint8_t i;
     //******************
+    if (song->spc_song_id == AMK_SPC_INVALID_SONG_ID)
+    {
+        return;
+    }
     spc_init(&spc);
     spc_set_game_title(&spc,
                        game_name);
@@ -205,9 +212,9 @@ static void amk_dump_spc(const amk_music_t *song,
     memcpy(&spc.ram[AMK_SPC_RAM_REGISTERS_ADDR],
            amk_spc_default_ram_registers,
            sizeof(amk_spc_default_ram_registers));
-    /* Tell the engine to play this song (TODO: don't use hardcoded value) */
-    spc.ram[AMK_SPC_RAM_SONG_NUMBER_ADDR] = 0xA;
-    /* Enable Yoshi drums if enabled */
+    /* Tell the engine to play this song */
+    spc.ram[AMK_SPC_RAM_SONG_NUMBER_ADDR] = song->spc_song_id;
+    /* Set Yoshi drums command if enabled */
     if (yoshi_drums_enable)
     {
         spc.ram[AMK_SPC_RAM_YOSHI_DRUMS_COMMAND_ADDR] = AMK_SPC_ENABLE_YOSHI_DRUMS;
@@ -231,14 +238,16 @@ void amk_dump(const rom_t *rom,
               const char *out_path,
               const char *default_song_length,
               const char *default_fade_length,
-              bool yoshi_drums_enable)
+              bool yoshi_drums_enable,
+              bool global_songs_enable)
 {
     buffer_t *buffer;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
-    int music_num, samples_num, i;
+    int music_num, global_music_num, samples_num, i;
     amk_spc_engine_t spc_engine;
     amk_sample_t *samples;
     amk_music_t *songs;
+    bool global_music_finished;
     //******************
     if (rom == NULL)
     {
@@ -277,12 +286,23 @@ void amk_dump(const rom_t *rom,
     }
     /* Find songs number and samples pointer */
     music_num = -1;
+    global_music_num = 0;
+    global_music_finished = false;
     samples_ptr = music_ptr;
     do
     {
         tmp = rom_read_long(rom,
                             samples_ptr);
         music_num++;
+        if ((tmp == 0x000000)
+            && (!global_music_finished))
+        {
+            global_music_num++;
+        }
+        else
+        {
+            global_music_finished = true;
+        }
         samples_ptr += 3;
     } while (tmp != 0xFFFFFF);
     /* Find samples number and sample loops pointer */
@@ -360,9 +380,20 @@ void amk_dump(const rom_t *rom,
         //******************
         music_data_ptr = rom_read_long(rom,
                                        music_ptr + (i * 3));
+        /* If the pointer is 0, the song is either global or missing */
         if (music_data_ptr == 0)
         {
             songs[i].music_data = NULL;
+            /* If the song is not global, mark it so we don't generate the SPC */
+            if ((i == 0)
+                || ((uint8_t)i > global_music_num))
+            {
+                songs[i].spc_song_id = AMK_SPC_INVALID_SONG_ID;
+            }
+            else
+            {
+                songs[i].spc_song_id = i;
+            }
         }
         else
         {
@@ -375,6 +406,7 @@ void amk_dump(const rom_t *rom,
             songs[i].music_data = rom_read_buffer(rom,
                                                   music_data_ptr + 4,
                                                   (uint32_t)music_len);
+            songs[i].spc_song_id = (uint8_t)global_music_num;
         }
         sample_group_ptr = (uint32_t)rom_read_word(rom,
                                                    sample_groups_ptr + (i * 2));
@@ -415,9 +447,10 @@ void amk_dump(const rom_t *rom,
                                       AMK_SPC_ENGINE_ADDR + 4,
                                       rom_read_word(rom,
                                                     AMK_SPC_ENGINE_ADDR));
-    // TODO restore
-    for (i = 10; i < 11; i++)
-    //for (i = 1; i < music_num; i++)
+    /* Generate all the SPCs (skip global songs if required) */
+    for (i = (global_songs_enable ? 0 : global_music_num);
+         i < music_num;
+         i++)
     {
         char spc_file_path[500];
         //******************
