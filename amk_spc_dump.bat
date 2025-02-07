@@ -12,11 +12,16 @@ set GLOBAL_SONGS="0"
 :: might want to set this to 1
 set VANILLA_SONGS="0"
 
+:: Song length set for all generated SPCs (in seconds)
+set SONG_LENGTH_S="240"
+
+:: Song fadeout length set for all generated SPCs (in milliseconds)
+set FADE_LENGTH_MS="10000"
+
+:: Don't change from here if you don't know what you're doing
 set /p ROM="ROM path: "
 set ROM=!ROM:"=!
 set OUT=!ROM:~0,-4!_spcs
-set SONG_LENGTH_S="240"
-set FADE_LENGTH_MS="10000"
 
 if exist "!OUT!" (
     rmdir /s /q "!OUT!" > nul
@@ -24,7 +29,6 @@ if exist "!OUT!" (
 
 mkdir "!OUT!" > nul
 
-:: TODO remove .\build
-.\build\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!"
+.\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!"
 
 pause
