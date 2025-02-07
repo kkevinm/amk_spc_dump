@@ -7,9 +7,7 @@ set YOSHI_DRUMS="1"
 :: Change to "0" to not generate SPCs of global songs (various jingles)
 set GLOBAL_SONGS="0"
 
-:: Change to "1" to generate SPCs 0A-28, which are usually just the SMW songs
-:: Note that some hacks may remove vanilla songs or change some of them, so you
-:: might want to set this to 1
+:: Change to "1" to generate the first 31 local song SPCs, which are usually just the SMW vanilla songs
 set VANILLA_SONGS="0"
 
 :: Song length set for all generated SPCs (in seconds)
