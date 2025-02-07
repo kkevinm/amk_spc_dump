@@ -43,7 +43,10 @@ const uint8_t amk_spc_default_ram_registers[] =
 
 const uint8_t amk_spc_main_loop_pos_bytes[] =
 {
-    0xEB, 0xFD, 0xF0, 0xFC
+    /* mov y, $fd */
+    0xEB, 0xFD,
+    /* beq $fc */
+    0xF0, 0xFC
 };
 
 typedef struct
