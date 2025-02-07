@@ -34,6 +34,7 @@
 #define AMK_SPC_DEFAULT_ECHO_BUFFER_ADDRESS  (0x60)
 
 #define AMK_SPC_INVALID_SONG_ID              (0x00)
+#define AMK_SPC_LOCAL_VANILLA_SONGS_NUMBER   (0x28-0x0A)
 
 const uint8_t amk_spc_default_ram_registers[] =
 {
@@ -65,6 +66,11 @@ typedef struct
     uint16_t start_address;
     uint8_t spc_song_id;
 } amk_music_t;
+
+static void print_separator(void)
+{
+    printf("----------------------------------------------------\n");
+}
 
 static uint16_t amk_get_spc_main_loop_pos(const spc_t *spc,
                                           uint16_t start_pos)
@@ -239,7 +245,8 @@ void amk_dump(const rom_t *rom,
               const char *default_song_length,
               const char *default_fade_length,
               bool yoshi_drums_enable,
-              bool global_songs_enable)
+              bool global_songs_enable,
+              bool vanilla_songs_enable)
 {
     buffer_t *buffer;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
@@ -316,6 +323,7 @@ void amk_dump(const rom_t *rom,
         loops_ptr += 3;
     } while (tmp != 0xFFFFFF);
 
+    print_separator();
     printf("Song pointers table located at $%06X with %d songs\n",
            music_ptr,
            music_num - 1);
@@ -326,6 +334,8 @@ void amk_dump(const rom_t *rom,
            loops_ptr);
     printf("Sample groups table located at $%06X\n",
            sample_groups_ptr);
+    print_separator();
+
     /* Sanity check */
     if ((music_num == 0)
         || (samples_num == 0))
@@ -447,13 +457,38 @@ void amk_dump(const rom_t *rom,
                                       AMK_SPC_ENGINE_ADDR + 4,
                                       rom_read_word(rom,
                                                     AMK_SPC_ENGINE_ADDR));
-    /* Generate all the SPCs (skip global songs if required) */
-    for (i = (global_songs_enable ? 0 : global_music_num);
-         i < music_num;
-         i++)
+    /* Generate all the SPCs */
+    for (i = 0; i < music_num; i++)
     {
         char spc_file_path[500];
         //******************
+        if (!global_songs_enable)
+        {
+            if (i < global_music_num)
+            {
+                printf("Skipped global song %02X\n",
+                       i);
+                continue;
+            }
+            else if (i == global_music_num)
+            {
+                print_separator();
+            }
+        }
+        if (!vanilla_songs_enable)
+        {
+            if ((i >= global_music_num)
+                && (i <= global_music_num + AMK_SPC_LOCAL_VANILLA_SONGS_NUMBER))
+            {
+                printf("Skipped vanilla song %02X\n",
+                       i);
+                continue;
+            }
+            else if (i == global_music_num + AMK_SPC_LOCAL_VANILLA_SONGS_NUMBER + 1)
+            {
+                print_separator();
+            }
+        }
         snprintf(spc_file_path,
                  sizeof(spc_file_path),
                  "%s/%s_%02X.spc",
@@ -467,7 +502,13 @@ void amk_dump(const rom_t *rom,
                      default_song_length,
                      default_fade_length,
                      yoshi_drums_enable);
+        printf("Generated song %02X\n",
+               i);
     }
+    print_separator();
+    printf("SPC files generated successfully in %s\n",
+           out_path);
+    print_separator();
     /* Destroy everything */
     free(buffer);
     for (i = 0; i < samples_num; i++)
