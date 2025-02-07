@@ -30,6 +30,6 @@ if exist "!OUT!" (
 
 mkdir "!OUT!" > nul
 
-.\build\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!" "!GLOBAL_SONGS_NUMBER_OVERRIDE!"
+.\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!" "!GLOBAL_SONGS_NUMBER_OVERRIDE!"
 
 pause
