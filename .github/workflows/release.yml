@@ -24,7 +24,7 @@ jobs:
         tar -a -c -f amk_spc_dump-${{ github.event.release.tag_name }}.zip *.exe *.bat *.txt
         copy *.zip ..
         cd ..
-        rm -rf build
+        rm -r build
         
     - name: Install GitHub CLI
       run: |
