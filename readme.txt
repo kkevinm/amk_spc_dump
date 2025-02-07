@@ -38,10 +38,6 @@ You can customize some of the tool's behavior by editing the "amk_spc_dump.bat" 
   changing this until the SPCs sound correctly (usually 9 is the correct value to use, but it can
   change depending on the hack).
 
-TODO:
-- check unheadered roms
-- check different AMK versions
-
 -----------------------------------
 
 Changelog:
