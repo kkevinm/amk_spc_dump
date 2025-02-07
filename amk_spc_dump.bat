@@ -16,6 +16,9 @@ set SONG_LENGTH_S="240"
 :: Song fadeout length set for all generated SPCs (in milliseconds)
 set FADE_LENGTH_MS="10000"
 
+:: Override how many global songs are in the ROM (0 = don't override). In most cases you want to keep this at 0.
+set GLOBAL_SONGS_NUMBER_OVERRIDE="0"
+
 :: Don't change from here if you don't know what you're doing
 set /p ROM="ROM path: "
 set ROM=!ROM:"=!
@@ -27,6 +30,6 @@ if exist "!OUT!" (
 
 mkdir "!OUT!" > nul
 
-.\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!"
+.\build\amk_spc_dump.exe "!ROM!" "!OUT!" "!SONG_LENGTH_S!" "!FADE_LENGTH_MS!" "!YOSHI_DRUMS!" "!GLOBAL_SONGS!" "!VANILLA_SONGS!" "!GLOBAL_SONGS_NUMBER_OVERRIDE!"
 
 pause

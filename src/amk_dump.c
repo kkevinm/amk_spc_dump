@@ -249,11 +249,12 @@ void amk_dump(const rom_t *rom,
               const char *default_fade_length,
               bool yoshi_drums_enable,
               bool global_songs_enable,
-              bool vanilla_songs_enable)
+              bool vanilla_songs_enable,
+              uint8_t global_songs_number_override)
 {
     buffer_t *buffer;
     uint32_t sample_groups_ptr, music_ptr, samples_ptr, loops_ptr, tmp;
-    int music_num, global_music_num, samples_num, i;
+    unsigned int music_num, global_music_num, samples_num, i;
     amk_spc_engine_t spc_engine;
     amk_sample_t *samples;
     amk_music_t *songs;
@@ -327,10 +328,18 @@ void amk_dump(const rom_t *rom,
     } while (tmp != 0xFFFFFF);
 
     print_separator();
-    printf("Song pointers table located at $%06X with %d songs\n",
+    printf("Song pointers table located at $%06X with %u songs (%u global)\n",
            music_ptr,
-           music_num - 1);
-    printf("Sample pointers table located at $%06X with %d samples\n",
+           music_num - 1,
+           global_music_num - 1);
+    if ((global_songs_number_override != 0)
+        && ((unsigned int)global_songs_number_override + 1 != global_music_num))
+    {
+        global_music_num = (unsigned int)global_songs_number_override + 1;
+        printf("NOTE: global songs number forced to %hhu\n",
+               global_songs_number_override);
+    }
+    printf("Sample pointers table located at $%06X with %u samples\n",
            samples_ptr,
            samples_num);
     printf("Sample loops table located at $%06X\n",

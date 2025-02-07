@@ -33,13 +33,14 @@ You can customize some of the tool's behavior by editing the "amk_spc_dump.bat" 
 - SONG_LENGTH_S: the song length (in seconds) set in all the SPC files. It is 4 minutes by default.
 - FADE_LENGTH_MS: the song fadeout length (in milliseconds) set in all the SPC files. It is 10
   seconds by default.
+- GLOBAL_SONGS_NUMBER_OVERRIDE: this is a useful setting if the generated SPCs (except the global
+  songs) appear to all be silent. If the SPCs work fine, then keep this at 0. Otherwise, try
+  changing this until the SPCs sound correctly (usually 9 is the correct value to use, but it can
+  change depending on the hack).
 
 TODO:
 - check unheadered roms
 - check different AMK versions
-- add global song number override to account for an edge case: if the amk list doesn't have entries
-  for the first songs after the global music list, it will mess up the global song number calculation
-  done by the tool, resulting in silent SPCs
 
 -----------------------------------
 
