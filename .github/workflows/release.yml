@@ -8,6 +8,7 @@ jobs:
   build:
     name: Build Release Zip
     runs-on: windows-latest
+    permissions: write-all
     
     steps:
     - name: Checkout Code
@@ -22,10 +23,12 @@ jobs:
         copy readme.txt build
         cd build
         tar -a -c -f amk_spc_dump-${{ github.event.release.tag_name }}.zip *.exe *.bat *.txt
+        ls
         copy amk_spc_dump-${{ github.event.release.tag_name }}.zip ..
         cd ..
         rm -r build
-        
+        ls
+
     - name: Install GitHub CLI
       run: |
         choco install gh

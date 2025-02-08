@@ -336,8 +336,8 @@ void amk_dump(const rom_t *rom,
         && ((unsigned int)global_songs_number_override + 1 != global_music_num))
     {
         global_music_num = (unsigned int)global_songs_number_override + 1;
-        printf("NOTE: global songs number forced to %hhu\n",
-               global_songs_number_override);
+        printf("NOTE: global songs number forced to %hu\n",
+               (uint16_t)global_songs_number_override);
     }
     printf("Sample pointers table located at $%06X with %u samples\n",
            samples_ptr,
