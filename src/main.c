@@ -14,7 +14,7 @@ int main(int argc,
     unsigned int yoshi_drums_enable;
     unsigned int global_songs_enable;
     unsigned int vanilla_songs_enable;
-    uint8_t global_songs_number_override;
+    uint16_t global_songs_number_override;
     //******************
     if (argc < 9)
     {
@@ -47,7 +47,7 @@ int main(int argc,
         return -1;
     }
     if (sscanf(argv[8],
-               "%hhu",
+               "%hu",
                &global_songs_number_override) != 1)
     {
         fprintf(stderr,
@@ -88,7 +88,7 @@ int main(int argc,
              yoshi_drums_enable != 0,
              global_songs_enable != 0,
              vanilla_songs_enable != 0,
-             global_songs_number_override);
+             (uint8_t)global_songs_number_override);
     rom_destroy(rom);
     free(rom_name);
     return 0;
