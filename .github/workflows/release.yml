@@ -22,9 +22,9 @@ jobs:
         copy amk_spc_dump.bat build
         copy readme.txt build
         cd build
-        tar -a -c -f amk_spc_dump-${{ github.event.release.tag_name }}.zip *.exe *.bat *.txt
+        tar -czf amk_spc_dump-${{ github.event.release.tag_name }}.tar.gz *.exe *.bat *.txt
         ls
-        copy amk_spc_dump-${{ github.event.release.tag_name }}.zip ..
+        copy amk_spc_dump-${{ github.event.release.tag_name }}.tar.gz ..
         cd ..
         rm -r build
         ls
@@ -37,5 +37,5 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload ${{ github.event.release.tag_name }} amk_spc_dump-${{ github.event.release.tag_name }}.zip
+        gh release upload ${{ github.event.release.tag_name }} amk_spc_dump-${{ github.event.release.tag_name }}.tar.gz
         

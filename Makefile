@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=-Wall -Wextra -pedantic -Os -std=c17
+FLAGS=-Wall -Wextra -pedantic -O3 -std=c17
 INC=
 LD=
 SRC=src/amk_dump.c src/main.c src/rom.c src/spc.c src/utils.c
