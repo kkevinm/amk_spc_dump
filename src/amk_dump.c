@@ -328,7 +328,7 @@ void amk_dump(const rom_t *rom,
     } while (tmp != 0xFFFFFF);
 
     print_separator();
-    printf("Song pointers table located at $%06X with %u songs (%u global)\n",
+    printf("Song pointers table located at $%06X with %u songs (estimated %u global)\n",
            music_ptr,
            music_num - 1,
            global_music_num - 1);
@@ -500,6 +500,12 @@ void amk_dump(const rom_t *rom,
             {
                 print_separator();
             }
+        }
+        if (songs[i].spc_song_id == AMK_SPC_INVALID_SONG_ID)
+        {
+            printf("Skipped empty song %02X\n",
+                   i);
+            continue;
         }
         snprintf(spc_file_path,
                  sizeof(spc_file_path),
